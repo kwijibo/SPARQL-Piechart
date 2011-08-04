@@ -1,0 +1,123 @@
+<!DOCTYPE HTML>
+<html>
+<head>
+	<meta http-equiv="content-type" content="text/html; charset=utf-8">
+
+	<title>Sparql-counts-charts</title>
+  <style type="text/css">
+    * {
+      font-family: verdana , sans-serif ;
+    }
+    textarea {
+      font-family: monaco , fixed-width ; 
+      font-size: 11pt ;
+      
+
+    }
+    #form {
+      width: 90%;
+      margin: auto;
+      padding: 2%;
+    
+    }
+  </style>	
+</head>
+<body>
+  <div id="form">
+    <h1>SPARQL Query to Piechart Demo</h1>
+			<p>
+			Enter a SPARQL SELECT query that returns results with <code>?count </code> <code>?label</code> and <code>?uri</code>, where <code>count</code> is the value for a segment of the pie chart, <code>label</code> is the label for the thing that  segment represents, and <code>uri</code> is the uri of the thing that segment represents.
+			</p>
+		<form action="http://api.talis.com/stores/trafficscotland/services/sparql" method="get" accept-charset="utf-8" id="sparql">
+      <label for="endpoint">SPARQL Endpoint URI: </label><input name="endpoint" id="endpoint" type="url" value="http://api.talis.com/stores/trafficscotland/services/sparql" size="60"/>
+      <textarea id="query" name="query" rows="18" cols="100">
+PREFIX traffic: &lt;http://purl.org/ontologies/road-traffic/&gt;
+PREFIX rdfs: &lt;http://www.w3.org/2000/01/rdf-schema#&gt;
+
+SELECT (COUNT( DISTINCT ?accident) AS ?count) ?uri ?label {
+
+?uri a traffic:Road ; 
+   rdfs:label ?label .
+
+?accident traffic:cause &lt;http://trafficscotland.dataincubator.org/causes/Accident&gt; ; 
+   traffic:road ?uri .
+
+} GROUP BY ?uri ?label
+ORDER BY DESC(?count)
+LIMIT 10
+      </textarea>
+		
+		<p><input type="submit" value="Query"></p>
+		</form>
+	</div>
+	        <div id="holder"></div>
+	<script type="text/javascript" charset="utf-8">
+		window.onload = function(){
+		var form = document.getElementById("sparql");
+		form.onsubmit = function(){
+			var query = document.getElementById("query").value;
+			var sparqlUri = document.getElementById('endpoint').value+'?query='+encodeURIComponent(query);
+/*			var sparqlUri = form.getAttribute('action')+'?query='+encodeURIComponent(query); */
+			var morphUri = 'http://morph.talis.com/?output=jsonp&callback=drawChart&data-uri[]='+encodeURIComponent(sparqlUri);
+			var newScript = document.createElement('script');
+			newScript.src= morphUri;
+			document.body.appendChild(newScript);
+			return false;
+
+		}
+
+		};
+
+
+		function drawChart(sparqlResults){
+			var rows = sparqlResults.results.bindings;
+			var countVals = [];	
+			var legends = [];
+			var hrefs = [];
+			for(var x= 0; x < rows.length; x++){
+				if(x>10){
+					break;
+				}
+				var row = rows[x];
+				var countNumber = parseInt(row.count.value);
+				countVals.push(countNumber);
+				hrefs.push(row.uri.value);
+				legends.push("%%.%% – "+row.label.value);
+			}	
+                var r = Raphael("holder");
+                r.g.txtattr.font = "12px 'Fontin Sans', Fontin-Sans, sans-serif";
+                
+                var pie = r.g.piechart(420, 140, 90, countVals, {legend: legends, legendpos: "west", href: hrefs });
+
+
+			pie.hover(function () {
+			    this.sector.stop();
+			    this.sector.scale(1.1, 1.1, this.cx, this.cy);
+			    if (this.label) {
+				this.label[0].stop();
+				this.label[0].scale(1.5);
+				this.label[1].attr({"font-weight": 800});
+			    }
+			}, function () {
+			    this.sector.animate({scale: [1, 1, this.cx, this.cy]}, 500, "bounce");
+			    if (this.label) {
+				this.label[0].animate({scale: 1}, 500, "bounce");
+				this.label[1].attr({"font-weight": 400});
+			    }
+			});
+		
+                
+		}
+
+
+
+	</script>
+
+	
+	<script type="text/javascript" charset="utf-8" src="http://raphaeljs.com/raphael.js">
+	</script>
+	<script type="text/javascript" charset="utf-8" src="https://github.com/dmitrybaranovskiy/g.raphael/blob/master/g.raphael-min.js?raw=true"></script>
+	<script type="text/javascript" charset="utf-8" src="https://github.com/dmitrybaranovskiy/g.raphael/blob/master/g.pie-min.js?raw=true"></script>
+ 
+</body>
+</html>
